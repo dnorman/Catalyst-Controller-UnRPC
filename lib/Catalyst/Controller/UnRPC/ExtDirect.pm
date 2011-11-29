@@ -62,7 +62,6 @@ sub _build_api {
 }
 
 sub dispatch : Local {
-    Catalyst::Controller::UnRPC::JSON::begin(@_);
     my ($self, $c) = @_;
     
     $self->api;
