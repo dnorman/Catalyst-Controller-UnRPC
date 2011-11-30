@@ -22,6 +22,7 @@ sub dispatch : Regex(.jsonstore$) {
     my $xactionstr  = $p->{xaction} || 'read';
     my $xactions = $self->api->{ $path };
     my $def = $xactions->{$xactionstr} if $xactions;
+    $c->stash( xactionstr => $xactionstr );
     
     my $action; 
     if( $def ){ # give the CRUD definitions the first right of refusal
@@ -54,7 +55,6 @@ sub dispatch : Regex(.jsonstore$) {
     
     $data = [$data] unless ref($data) eq 'ARRAY'; # data is always a list
     $response->{success} = JSON::true;
-    
     if ( $xactionstr eq 'read' ){
         my $first = length (@$data) ? $data->[0] : {};
         
@@ -107,14 +107,28 @@ sub end : Private {
     
     my @errors = $self->_process_errors( $c );
     
+    my $response = $c->stash->{response} || {};
     if (@errors){
         # MUST SEND AS STATUS 200 IF ERROR
 	my $main = $errors[0];
-        $c->stash( response => { success => JSON::false, message => $main->{message}, error_code => $main->{code}, (@errors > 1) ? (ERRORLIST => \@errors):() } );
+        $response = {
+		     success => JSON::false,
+		     message => $main->{message},
+		     error_code => $main->{code},
+		     (@errors > 1) ? (ERRORLIST => \@errors):()
+	};
+	if($c->stash->{xactionstr} eq 'read'){
+	    $response->{metaData} = {
+			    fields          => [],
+			    successProperty => 'success',
+			    messageProperty => 'message',
+			};
+	}
     }
-    $c->stash->{response} ||= {};
     
-    $c->forward( $c->view('JSON') );
+    
+    $c->res->content_type('application/json');
+    $c->res->body( JSON::XS->new->convert_blessed->pretty->encode( $response ) );
 }
 
 sub _build_api {

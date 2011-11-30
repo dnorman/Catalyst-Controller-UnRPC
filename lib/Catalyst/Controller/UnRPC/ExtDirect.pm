@@ -124,7 +124,6 @@ sub end : Private {
     
     my $response = $c->stash->{response} || {};
     if (@errors){
-        $c->response->status(400);
 	my $main = $errors[0];
         $response = { type => 'exception', message => $main->{message}, error_code => $main->{code}, (@errors > 1) ? (ERRORLIST => \@errors):() };
     }
