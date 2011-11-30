@@ -3,9 +3,9 @@ package Catalyst::Controller::UnRPC::ExtDirect;
 use strict;
 use warnings;
 use Moose;
+use JSON::XS;
 
 BEGIN { extends 'Catalyst::Controller::UnRPC::JSON' };
-use JSON;
 
 has 'api'    => ( is => 'rw', lazy_build => 1 );
 has 'routes' => ( is => 'rw' );
@@ -31,7 +31,7 @@ sub src : Local {
     $var =~ /^[\w\.]+$/ or die ["Invalid var parameter"];
     
     $c->res->content_type('application/javascript');
-    $c->res->body( "$var = " . JSON::encode_json( $api ) . ';' );
+    $c->res->body( "$var = " . JSON::XS::encode_json( $api ) . ';' );
 }
 
 sub _build_api {
@@ -122,14 +122,15 @@ sub end : Private {
     
     my @errors = $self->_process_errors( $c );
     
+    my $response = $c->stash->{response} || {};
     if (@errors){
         $c->response->status(400);
 	my $main = $errors[0];
-        $c->stash( response => { success => JSON::false, message => $main->{message}, error_code => $main->{code}, (@errors > 1) ? (ERRORLIST => \@errors):() } );
+        $response = { type => 'exception', message => $main->{message}, error_code => $main->{code}, (@errors > 1) ? (ERRORLIST => \@errors):() };
     }
-    $c->stash->{response} ||= {};
     
-    $c->forward( $c->view('JSON') );
+    $c->res->content_type('application/json');
+    $c->res->body( JSON::XS->new->convert_blessed->pretty->encode( $response ) );
 }
 
 1;

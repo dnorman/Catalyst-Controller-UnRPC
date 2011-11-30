@@ -52,19 +52,19 @@ sub end : Private {
     
     my @errors = $self->_process_errors( $c );
     
+    my $response = $c->stash->{response} || {};
     if (@errors){
 	my $main = $errors[0];
         $c->response->status(400);
-        $c->stash( response => {
+        $response = {
 		ERRORCODE => $main->{code},
 		ERROR => $main->{message},
 		(@errors > 1) ? (ERRORLIST => \@errors):()
-	    }
-	);
+	    };
     }
-    $c->stash->{response} ||= {};
     
-    $c->forward( $c->view('JSON') );
+    $c->res->content_type('application/json');
+    $c->res->body( JSON::XS->new->convert_blessed->pretty->encode( $response ) );
 }
 
 1;
