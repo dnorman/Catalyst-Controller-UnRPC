@@ -88,14 +88,24 @@ sub _metafields{
     }
     my $snip = $def->{snip} or return $fieldref;
     
+    my %gotfields;
     my @outfields;
     foreach my $name (@$fieldref){
         my $fdef = $snip->{$name};
+	$gotfields{$name} = 1;
         if(ref($fdef) eq 'HASH' and $fdef->{type}){
             push @outfields, { name => $name, type => $fdef->{type} };
         }else{
             push @outfields, { name => $name };
         }
+    }
+    foreach my $name (keys %$snip){
+	$gotfields{$name} && next;
+	
+        my $fdef = $snip->{$name};
+        if(ref($fdef) eq 'HASH' and $fdef->{type}){
+            push @outfields, { name => $name, type => $fdef->{type} };
+	}
     }
     
     return \@outfields;
