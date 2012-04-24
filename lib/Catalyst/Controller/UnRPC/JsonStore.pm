@@ -20,8 +20,16 @@ sub dispatch : Regex(.jsonstore$) {
     $path    =~ s/\.jsonstore$//i;
     
     my $xactionstr  = $p->{xaction} || 'read';
-    my $xactions = $self->api->{ $path };
-    my $def = $xactions->{$xactionstr} if $xactions;
+    my $xactions = $self->api->{ $path } || {};
+    
+    my ($def, $withmeta);
+    if(lc $xactionstr eq 'meta'){
+	$withmeta = 1;
+	$def = $xactions->{read} if $xactions;
+    }else{
+	$withmeta = 1 if $xactionstr eq 'read';
+	$def = $xactions->{$xactionstr} if $xactions;
+    }
     $c->stash( xactionstr => $xactionstr );
     
     my $action; 
@@ -44,8 +52,9 @@ sub dispatch : Regex(.jsonstore$) {
         $p->{records} = JSON->new->allow_nonref->decode( $c->req->params->{records} );
     }
     
-    
-    $c->forward( $action , [ $p ] );
+    if($xactionstr ne 'meta'){
+	$c->forward( $action , [ $p ] );
+    }
     
     my $response = $c->stash->{response} ||= {};
     ref( $response ) eq 'HASH' or die ["Sanity error - response not found"];
@@ -54,13 +63,16 @@ sub dispatch : Regex(.jsonstore$) {
     my $data     = $response->{$root} ||= [];# || die ["Root '$root' not found"];
     
     $data = [$data] unless ref($data) eq 'ARRAY'; # data is always a list
+    
+    if ($xactionstr ne 'meta'){
+	$response->{recordcount}   = scalar @{$data};
+    }
+    
     $response->{success} = JSON::true;
-    if ( $xactionstr eq 'read' ){
+    if ( $withmeta ){
         my $first = length (@$data) ? $data->[0] : {};
-        
         my $fieldlist = $c->stash->{fields} || [ keys %{ $first } ];
         
-        $response->{recordcount}   = scalar @{$data};
         $response->{metaData} = {
             idProperty      => $c->stash->{idProperty} || ( exists( $first->{idx} ) ? 'idx' : 'id'), # evil / lazy
             root            => $root,
