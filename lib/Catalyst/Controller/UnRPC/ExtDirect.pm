@@ -129,7 +129,7 @@ sub end : Private {
     }
     
     $c->res->content_type('application/json');
-    $c->res->body( JSON::XS->new->convert_blessed->pretty->encode( $response ) );
+    $c->res->body( JSON::XS->new->ascii->convert_blessed->pretty->encode( $response ) );
 }
 
 1;
