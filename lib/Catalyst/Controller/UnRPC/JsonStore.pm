@@ -64,7 +64,7 @@ sub dispatch : Regex(.jsonstore$) {
     
     $data = [$data] unless ref($data) eq 'ARRAY'; # data is always a list
     
-    if ($xactionstr ne 'meta'){
+    if ($xactionstr ne 'meta' && !exists $response->{recordcount}){ # don't override long counts needed for buffered stores
 	$response->{recordcount}   = scalar @{$data};
     }
     
